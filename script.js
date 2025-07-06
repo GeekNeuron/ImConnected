@@ -65,20 +65,37 @@ document.addEventListener('DOMContentLoaded', () => {
     function identifyAndGroupProtocols(configs) {
     const groups = {};
     const protocolMatchers = [
+        // Link-based protocols
         { id: 'VLESS', name: 'VLESS', pattern: /vless:\/\//i },
         { id: 'VMess', name: 'VMess', pattern: /vmess:\/\//i },
         { id: 'Trojan', name: 'Trojan', pattern: /trojan:\/\//i },
         { id: 'SS', name: 'Shadowsocks', pattern: /ss:\/\//i },
         { id: 'SSR', name: 'ShadowsocksR', pattern: /ssr:\/\//i },
+        { id: 'Hysteria2', name: 'Hysteria2', pattern: /hysteria2:\/\//i },
         { id: 'MTProto', name: 'MTProto', pattern: /tg:\/\/proxy/i },
         { id: 'SOCKS5', name: 'SOCKS5', pattern: /socks5:\/\//i },
-        { id: 'HTTP/HTTPS', name: 'HTTP/HTTPS Proxy', pattern: /https?:\/\//i }
+        
+        // Text-based config identifiers (basic recognition)
+        { id: 'WireGuard', name: 'WireGuard', pattern: /\[Interface\]/i },
+        { id: 'OpenVPN', name: 'OpenVPN', pattern: /^client/im },
     ];
 
     configs.forEach(config => {
         let found = false;
         for (const matcher of protocolMatchers) {
-            if (matcher.pattern.test(config)) {
+            // For text-based, we check the whole config block
+            if (matcher.id === 'WireGuard' || matcher.id === 'OpenVPN') {
+                 if (matcher.pattern.test(config)) {
+                    if (!groups[matcher.id]) {
+                        groups[matcher.id] = { name: matcher.name, links: [] };
+                    }
+                    groups[matcher.id].links.push("Text config detected. Click to see details.");
+                    found = true;
+                    break;
+                }
+            }
+            // For link-based
+            else if (matcher.pattern.test(config)) {
                 if (!groups[matcher.id]) {
                     groups[matcher.id] = { name: matcher.name, links: [] };
                 }
@@ -96,27 +113,26 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} protocol - The protocol identifier (e.g., 'VMess').
      * @returns {string} The name of the Material Icon.
      */
-    function getProtocolIcon(protocol) {
-        const icons = {
-            'VMess': 'hub',
-            'VLESS': 'hub',
-            'Trojan': 'vpn_key',
-            'SS': 'dns',
-            'SSR': 'dns',
-            'WireGuard': 'security',
-            'MTProto': 'send',
-            'Hysteria2': 'bolt',
-            'REALITY': 'visibility',
-            'SOCKS5': 'settings_ethernet',
-            'HTTP/HTTPS': 'http',
-            'OpenVPN': 'lock_open',
-            'L2TP/IPSec': 'vpn_lock',
-            'SSTP': 'lock',
-            'IKEv2': 'key',
-            'PPTP': 'router'
-        };
-        return icons[protocol] || 'shield';
-    }
+    function getProtocolIcon(protocolId) {
+    const icons = {
+        'VMess': 'hub',
+        'VLESS': 'hub',
+        'Trojan': 'vpn_key',
+        'SS': 'dns',
+        'SSR': 'dns',
+        'WireGuard': 'security',
+        'MTProto': 'send',
+        'Hysteria2': 'bolt',
+        'SOCKS5': 'settings_ethernet',
+        'HTTP/HTTPS': 'http',
+        'OpenVPN': 'lock_open',
+        'L2TP/IPSec': 'vpn_lock',
+        'SSTP': 'lock',
+        'IKEv2': 'key',
+        'PPTP': 'router'
+    };
+    return icons[protocolId] || 'shield';
+}
 
 
     /**
@@ -243,12 +259,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- SIMULATION of fetching and parsing HTML from t.me/s/channel ---
     const dummyConfigsFromUrl = [
-        'tg://proxy?server=1.1.1.1&port=443&secret=eecf0123456789abcdef0123456789abcdef',
-        'tg://proxy?server=2.2.2.2&port=443&secret=ee0123456789abcdef0123456789abcdef01',
-        'vless://abc-def@1.2.3.4:443?security=tls&sni=host.com#VLESS-1',
-        'vless://ghi-jkl@5.6.7.8:443?security=tls&sni=host2.com#VLESS-2',
-        'ss://YWVzLTI1Ni1nY206cGFzc3dvcmQ@3.3.3.3:8888#Shadowsocks-1'
-    ];
+    'vless://abc-1@host.com:443?security=tls#VLESS-sample-1',
+    'vless://abc-2@host.com:443?security=tls#VLESS-sample-2',
+    'vless://abc-3@host.com:443?security=tls#VLESS-sample-3',
+    'vless://abc-4@host.com:443?security=tls#VLESS-sample-4',
+    'vless://abc-5@host.com:443?security=tls#VLESS-sample-5',
+    'tg://proxy?server=1.1.1.1&port=443&secret=ee_secret_1',
+    'tg://proxy?server=2.2.2.2&port=443&secret=ee_secret_2',
+    'tg://proxy?server=3.3.3.3&port=443&secret=ee_secret_3',
+    'tg://proxy?server=4.4.4.4&port=443&secret=ee_secret_4',
+    'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ@1.2.3.4:1000#SS-sample-1',
+    'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ@1.2.3.4:1001#SS-sample-2',
+    'trojan://password@5.6.7.8:443#Trojan-sample-1',
+    'hysteria2://auth@9.8.7.6:1234?sni=host.com#Hysteria-sample'
+];
     
     setTimeout(() => {
         const groups = identifyAndGroupProtocols(dummyConfigsFromUrl);
