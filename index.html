@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImConnected</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header id="main-header">
+        <h1>ImConnected</h1>
+        <span class="material-icons theme-switcher-icon">brightness_6</span>
+    </header>
+
+    <div class="source-url-banner" id="source-url-banner" style="display: none;">
+        <span class="material-icons">link</span>
+        <span id="source-url-text"></span>
+        <button id="clear-source-btn" class="material-icons">close</button>
+    </div>
+
+    <main class="container">
+        <div class="toolbar">
+            <button id="test-all-btn" class="action-btn">
+                <span class="material-icons">electric_bolt</span>
+                Test All Connections
+            </button>
+        </div>
+        <ul id="config-list" class="config-list">
+            </ul>
+    </main>
+
+    <footer>
+        <button id="add-from-clipboard-btn" class="footer-btn">
+            <span class="material-icons">add</span>
+        </button>
+        <button id="live-check-btn" class="footer-btn">
+            <span class="material-icons">travel_explore</span>
+            Live Check
+        </button>
+    </footer>
+
+    <div id="live-check-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Live Check</h2>
+                <span id="close-modal-btn" class="material-icons close-button">close</span>
+            </div>
+            <p>Enter a website URL or a public Telegram channel link to import configurations.</p>
+            <input type="text" id="url-input" placeholder="e.g., https://example.com/configs">
+            <small>For Telegram, use the public view format: `https://t.me/s/channelname`</small>
+            <button id="fetch-configs-btn" class="action-btn">Fetch and Test</button>
+        </div>
+    </div>
+
+    <div id="toast-notification" class="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
