@@ -2,8 +2,6 @@
 
 A modern, web-based tool to manage and test your proxy and VPN configurations live. Built with pure HTML, CSS, and JavaScript, designed to be deployed seamlessly on GitHub Pages.
 
-![ImConnected Screenshot](https://user-images.githubusercontent.com/your-image-url.png) **Live Demo:** `https://GeekNeuron.github.io/ImConnected/`
-
 ---
 
 ## ✨ Features
