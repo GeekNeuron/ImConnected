@@ -47,6 +47,7 @@ body {
     color: var(--primary-text);
     transition: background-color 0.3s, color 0.3s;
     line-height: 1.6;
+    padding-bottom: 80px;
 }
 
 .container {
@@ -190,6 +191,9 @@ header#main-header h1 {
     font-size: 1.1em;
     font-weight: 700;
     margin-left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .ping-success {
@@ -335,4 +339,100 @@ footer {
 }
 .toast.error {
     background-color: var(--error-color);
+}
+
+/* --- Styles for Collapsible Content --- */
+
+.config-item-header {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    cursor: pointer;
+}
+
+.config-item {
+    overflow: hidden; /* Important for collapsible content */
+}
+
+.expand-icon {
+    transition: transform 0.3s ease;
+}
+
+.config-item.expanded .expand-icon {
+    transform: rotate(180deg);
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+    background-color: var(--primary-bg);
+    border-top: 1px solid var(--border-color);
+}
+
+.config-item.expanded .collapsible-content {
+    max-height: 500px; /* Adjust as needed */
+    padding: 15px 20px;
+    transition: max-height 0.5s ease-in, padding 0.5s ease-in;
+}
+
+.links-list {
+    list-style: none;
+    margin-bottom: 15px;
+}
+
+.link-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--secondary-bg);
+    border-radius: 12px;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+    color: var(--secondary-text);
+}
+
+.link-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 10px;
+}
+
+.copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--secondary-text);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.copy-btn:hover {
+    color: var(--accent-color);
+}
+
+.copy-all-btn {
+    background-color: transparent;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    width: 100%;
+    padding: 10px;
+    border-radius: 100px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.copy-all-btn:hover {
+    background-color: var(--accent-color);
+    color: white;
 }
