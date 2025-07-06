@@ -107,6 +107,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     return groups;
 }
+
+    /**
+ * Creates a temporary DOM element to parse HTML string.
+ * @param {string} htmlString - The raw HTML content from the backend.
+ * @returns {Document} A parsable HTML document.
+ */
+function parseHtml(htmlString) {
+    const parser = new DOMParser();
+    return parser.parseFromString(htmlString, 'text/html');
+}
+
+/**
+ * Extracts all valid proxy links from the parsed HTML document.
+ * @param {Document} doc - The HTML document to parse.
+ * @returns {string[]} An array of found configuration links.
+ */
+function extractLinksFromDoc(doc) {
+    const links = [];
+    const anchors = doc.querySelectorAll('a'); // Get all <a> tags
+    const linkPatterns = [
+        /tg:\/\/proxy/i,
+        /vless:\/\//i,
+        /vmess:\/\//i,
+        /trojan:\/\//i,
+        /ss:\/\//i,
+        /ssr:\/\//i,
+        /hysteria2:\/\//i,
+    ];
+
+    anchors.forEach(a => {
+        const href = a.href;
+        if (href) {
+            for (const pattern of linkPatterns) {
+                if (pattern.test(href)) {
+                    links.push(href);
+                    break; // Move to the next <a> tag once a match is found
+                }
+            }
+        }
+    });
+    return links;
+}
     
     /**
      * Gets a corresponding Google Icon for a protocol.
@@ -240,10 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 }
 
-    /**
-     * Fetches configs from a URL (simulated).
-     */
-    function fetchFromUrl() {
+async function fetchFromUrl() {
     const url = urlInput.value.trim();
     if (!url) {
         showToast('Please enter a URL.', 'error');
@@ -256,42 +295,40 @@ document.addEventListener('DOMContentLoaded', () => {
     configList.innerHTML = '';
     sourceUrlText.textContent = url;
     sourceBanner.style.display = 'flex';
-    
-    // --- SIMULATION of fetching and parsing HTML from t.me/s/channel ---
-    const dummyConfigsFromUrl = [
-    'vless://abc-1@host.com:443?security=tls#VLESS-sample-1',
-    'vless://abc-2@host.com:443?security=tls#VLESS-sample-2',
-    'vless://abc-3@host.com:443?security=tls#VLESS-sample-3',
-    'vless://abc-4@host.com:443?security=tls#VLESS-sample-4',
-    'vless://abc-5@host.com:443?security=tls#VLESS-sample-5',
-    'tg://proxy?server=1.1.1.1&port=443&secret=ee_secret_1',
-    'tg://proxy?server=2.2.2.2&port=443&secret=ee_secret_2',
-    'tg://proxy?server=3.3.3.3&port=443&secret=ee_secret_3',
-    'tg://proxy?server=4.4.4.4&port=443&secret=ee_secret_4',
-    'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ@1.2.3.4:1000#SS-sample-1',
-    'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ@1.2.3.4:1001#SS-sample-2',
-    'trojan://password@5.6.7.8:443#Trojan-sample-1',
-    'hysteria2://auth@9.8.7.6:1234?sni=host.com#Hysteria-sample'
-];
-    
-    setTimeout(() => {
-        const groups = identifyAndGroupProtocols(dummyConfigsFromUrl);
-        if (Object.keys(groups).length > 0) {
-            for (const protocolId in groups) {
-                addConfigGroupToList(protocolId, groups[protocolId]);
-            }
-            showToast(`Found ${Object.keys(groups).length} protocol groups. Now testing...`, 'info');
-            testAllConnections();
-        } else {
-             showToast('No configs found at the source.', 'info');
-        }
-    }, 1500);
-}
 
-    function closeModal() {
-        liveCheckModal.style.display = 'none';
-        urlInput.value = '';
+    // Construct the URL to our own backend function on Vercel
+    const apiUrl = `/api/fetch?url=${encodeURIComponent(url)}`;
+
+    try {
+        // Call our backend
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`Network response was not ok: ${response.statusText}`);
+        }
+        const htmlContent = await response.text();
+
+        // Parse the received HTML and extract links
+        const doc = parseHtml(htmlContent);
+        const extractedLinks = extractLinksFromDoc(doc);
+
+        if (extractedLinks.length === 0) {
+            showToast('No valid configuration links found on that page.', 'info');
+            return;
+        }
+
+        // Group and display the real links
+        const groups = identifyAndGroupProtocols(extractedLinks);
+        for (const protocolId in groups) {
+            addConfigGroupToList(protocolId, groups[protocolId]);
+        }
+        showToast(`Found and grouped ${extractedLinks.length} links. Now testing...`, 'info');
+        testAllConnections();
+
+    } catch (error) {
+        console.error('Error fetching via backend:', error);
+        showToast(`Error: ${error.message}`, 'error');
     }
+}
 
     // --- Event Delegation for Dynamic Content ---
 configList.addEventListener('click', (e) => {
