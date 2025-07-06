@@ -62,29 +62,34 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} config - The configuration string.
      * @returns {{protocol: string, name: string} | null} The identified protocol and name or null.
      */
-    function identifyProtocol(config) {
-        config = config.trim();
-        if (config.startsWith('ss://')) return { protocol: 'SS', name: 'Shadowsocks' };
-        if (config.startsWith('ssr://')) return { protocol: 'SSR', name: 'ShadowsocksR' };
-        if (config.startsWith('vmess://')) return { protocol: 'VMess', name: 'VMess' };
-        if (config.startsWith('vless://')) return { protocol: 'VLESS', name: 'VLESS' };
-        if (config.startsWith('trojan://')) return { protocol: 'Trojan', name: 'Trojan' };
-        if (config.includes('[Interface]') && config.includes('PrivateKey')) return { protocol: 'WireGuard', name: 'WireGuard' };
-        if (config.startsWith('hysteria2://')) return { protocol: 'Hysteria2', name: 'Hysteria2' };
-        if (config.includes('reality-opts')) return { protocol: 'REALITY', name: 'REALITY' };
-        // Add more basic recognizers
-        if (config.startsWith('http://') || config.startsWith('https://')) return { protocol: 'HTTP/HTTPS', name: 'HTTP/HTTPS Proxy' };
-        if (config.startsWith('socks5://')) return { protocol: 'SOCKS5', name: 'SOCKS5' };
-        // Add placeholders for complex types
-        if (config.toLowerCase().includes('openvpn')) return { protocol: 'OpenVPN', name: 'OpenVPN' };
-        if (config.toLowerCase().includes('l2tp') || config.toLowerCase().includes('ipsec')) return { protocol: 'L2TP/IPSec', name: 'L2TP/IPSec' };
-        if (config.toLowerCase().includes('sstp')) return { protocol: 'SSTP', name: 'SSTP' };
-        if (config.toLowerCase().includes('ikev2')) return { protocol: 'IKEv2', name: 'IKEv2' };
-        if (config.toLowerCase().includes('pptp')) return { protocol: 'PPTP', name: 'PPTP' };
-        if (config.toLowerCase().includes('tg://proxy?server=')) return { protocol: 'MTProto', name: 'MTProto' };
-        
-        return null;
-    }
+    function identifyAndGroupProtocols(configs) {
+    const groups = {};
+    const protocolMatchers = [
+        { id: 'VLESS', name: 'VLESS', pattern: /vless:\/\//i },
+        { id: 'VMess', name: 'VMess', pattern: /vmess:\/\//i },
+        { id: 'Trojan', name: 'Trojan', pattern: /trojan:\/\//i },
+        { id: 'SS', name: 'Shadowsocks', pattern: /ss:\/\//i },
+        { id: 'SSR', name: 'ShadowsocksR', pattern: /ssr:\/\//i },
+        { id: 'MTProto', name: 'MTProto', pattern: /tg:\/\/proxy/i },
+        { id: 'SOCKS5', name: 'SOCKS5', pattern: /socks5:\/\//i },
+        { id: 'HTTP/HTTPS', name: 'HTTP/HTTPS Proxy', pattern: /https?:\/\//i }
+    ];
+
+    configs.forEach(config => {
+        let found = false;
+        for (const matcher of protocolMatchers) {
+            if (matcher.pattern.test(config)) {
+                if (!groups[matcher.id]) {
+                    groups[matcher.id] = { name: matcher.name, links: [] };
+                }
+                groups[matcher.id].links.push(config);
+                found = true;
+                break;
+            }
+        }
+    });
+    return groups;
+}
     
     /**
      * Gets a corresponding Google Icon for a protocol.
@@ -118,52 +123,63 @@ document.addEventListener('DOMContentLoaded', () => {
      * Adds a configuration to the list in the UI.
      * @param {string} configString - The full configuration string.
      */
-    function addConfigToList(configString) {
-        const protocolInfo = identifyProtocol(configString);
-        if (!protocolInfo) {
-            return; // Don't add if not identifiable
-        }
+    function addConfigGroupToList(protocolId, groupData) {
+    const listItem = document.createElement('li');
+    listItem.className = 'config-item';
+    listItem.dataset.protocol = protocolId;
 
-        const listItem = document.createElement('li');
-        listItem.className = 'config-item';
-        listItem.dataset.config = configString;
+    const linksHtml = groupData.links.map(link => `
+        <li class="link-item">
+            <span class="link-text">${link}</span>
+            <button class="material-icons copy-btn" title="Copy Link">content_copy</button>
+        </li>
+    `).join('');
 
-        listItem.innerHTML = `
-            <span class="material-icons config-icon">${getProtocolIcon(protocolInfo.protocol)}</span>
+    listItem.innerHTML = `
+        <div class="config-item-header">
+            <span class="material-icons config-icon">${getProtocolIcon(protocolId)}</span>
             <div class="config-details">
-                <div class="config-protocol">${protocolInfo.name}</div>
-                <div class="config-info">${protocolInfo.protocol} Config</div>
+                <div class="config-protocol">${groupData.name}</div>
+                <div class="config-info">${groupData.links.length} configurations found</div>
             </div>
-            <div class="config-ping ping-na">n/a</div>
-        `;
-        configList.appendChild(listItem);
-    }
+            <div class="config-ping ping-na">
+                n/a
+                <span class="material-icons expand-icon">expand_more</span>
+            </div>
+        </div>
+        <div class="collapsible-content">
+            <ul class="links-list">${linksHtml}</ul>
+            <button class="copy-all-btn">
+                <span class="material-icons">content_copy</span>
+                Copy All ${groupData.name} Links
+            </button>
+        </div>
+    `;
+    configList.appendChild(listItem);
+}
     
     /**
      * Simulates a ping test for a single configuration item.
      * @param {HTMLElement} listItem - The list item element to test.
      */
     function testConnection(listItem) {
-        const pingElement = listItem.querySelector('.config-ping');
-        pingElement.textContent = '...'; // Testing in progress
-        pingElement.className = 'config-ping ping-na';
-        
-        // --- SIMULATION ---
-        // Real-world pinging of these protocols from a browser is not directly possible
-        // due to security restrictions. This is a simulation.
-        // We generate a random "ping" to demonstrate functionality.
-        setTimeout(() => {
-            const success = Math.random() > 0.3; // 70% chance of success
-            if (success) {
-                const pingTime = Math.floor(Math.random() * 400) + 50; // 50-450ms
-                pingElement.textContent = `${pingTime}ms`;
-                pingElement.className = 'config-ping ping-success';
-            } else {
-                pingElement.textContent = 'n/a';
-                pingElement.className = 'config-ping ping-na';
-            }
-        }, Math.random() * 2000 + 500); // Simulate network delay
-    }
+    const pingElement = listItem.querySelector('.config-ping');
+    pingElement.childNodes[0].nodeValue = '... '; // Testing in progress
+
+    setTimeout(() => {
+        const success = Math.random() > 0.3;
+        if (success) {
+            const pingTime = Math.floor(Math.random() * 400) + 50;
+            pingElement.childNodes[0].nodeValue = `${pingTime}ms `;
+            pingElement.classList.add('ping-success');
+            pingElement.classList.remove('ping-na');
+        } else {
+            pingElement.childNodes[0].nodeValue = 'n/a ';
+            pingElement.classList.remove('ping-success');
+            pingElement.classList.add('ping-na');
+        }
+    }, Math.random() * 2000 + 500);
+}
 
     /**
      * Tests all configurations in the list.
@@ -181,70 +197,114 @@ document.addEventListener('DOMContentLoaded', () => {
      * Reads from clipboard and adds configurations.
      */
     async function addFromClipboard() {
-        try {
-            const text = await navigator.clipboard.readText();
-            const configs = text.split(/\r?\n/).filter(line => line.trim() !== '');
-            let addedCount = 0;
-            
-            configs.forEach(config => {
-                if (identifyProtocol(config)) {
-                    addConfigToList(config);
-                    addedCount++;
-                }
-            });
-
-            if (addedCount > 0) {
-                showToast(`Added ${addedCount} configuration(s) from clipboard.`, 'info');
-            } else {
-                showToast('No valid configurations found in clipboard.', 'error');
-            }
-        } catch (error) {
-            console.error('Failed to read clipboard:', error);
-            showToast('Could not access clipboard.', 'error');
+    try {
+        const text = await navigator.clipboard.readText();
+        const configs = text.split(/\r?\n/).filter(line => line.trim() !== '' && line.includes('://'));
+        
+        if (configs.length === 0) {
+             showToast('No valid configurations found in clipboard.', 'error');
+             return;
         }
+
+        const groups = identifyAndGroupProtocols(configs);
+        if (Object.keys(groups).length === 0) {
+            showToast('Could not identify any known protocols.', 'error');
+            return;
+        }
+
+        configList.innerHTML = ''; // Clear previous list
+        for (const protocolId in groups) {
+            addConfigGroupToList(protocolId, groups[protocolId]);
+        }
+        showToast(`Added ${configs.length} configs from clipboard.`, 'info');
+
+    } catch (error) {
+        console.error('Failed to read clipboard:', error);
+        showToast('Could not access clipboard.', 'error');
     }
+}
 
     /**
      * Fetches configs from a URL (simulated).
      */
     function fetchFromUrl() {
-        const url = urlInput.value.trim();
-        if (!url) {
-            showToast('Please enter a URL.', 'error');
-            return;
-        }
-        
-        // --- SIMULATION ---
-        // Actual fetching would require CORS-enabled endpoints or a backend proxy.
-        // This is a placeholder demonstrating the UI flow.
-        showToast(`Fetching from ${url}...`, 'info');
-        closeModal();
-        
-        // Clear existing list and show banner
-        configList.innerHTML = '';
-        sourceUrlText.textContent = url;
-        sourceBanner.style.display = 'flex';
-        
-        // Dummy configs for demonstration
-        const dummyConfigs = [
-            'vless://user@host:443?encryption=none&security=tls&sni=example.com#VLESS-TLS',
-            'ss://YWVzLTI1Ni1nY206cGFzc3dvcmQ@1.1.1.1:8888#Shadowsocks-Sample',
-            'trojan://password@host.com:443#Trojan-Example',
-            'tg://proxy?server=1.2.3.4&port=443&secret=dd00112233445566778899aabbccddeeff'
-        ];
-        
-        setTimeout(() => {
-            dummyConfigs.forEach(addConfigToList);
-            showToast(`Found ${dummyConfigs.length} configs. Now testing...`, 'info');
-            testAllConnections();
-        }, 1500);
+    const url = urlInput.value.trim();
+    if (!url) {
+        showToast('Please enter a URL.', 'error');
+        return;
     }
+    
+    showToast(`Fetching from ${url}...`, 'info');
+    closeModal();
+    
+    configList.innerHTML = '';
+    sourceUrlText.textContent = url;
+    sourceBanner.style.display = 'flex';
+    
+    // --- SIMULATION of fetching and parsing HTML from t.me/s/channel ---
+    const dummyConfigsFromUrl = [
+        'tg://proxy?server=1.1.1.1&port=443&secret=eecf0123456789abcdef0123456789abcdef',
+        'tg://proxy?server=2.2.2.2&port=443&secret=ee0123456789abcdef0123456789abcdef01',
+        'vless://abc-def@1.2.3.4:443?security=tls&sni=host.com#VLESS-1',
+        'vless://ghi-jkl@5.6.7.8:443?security=tls&sni=host2.com#VLESS-2',
+        'ss://YWVzLTI1Ni1nY206cGFzc3dvcmQ@3.3.3.3:8888#Shadowsocks-1'
+    ];
+    
+    setTimeout(() => {
+        const groups = identifyAndGroupProtocols(dummyConfigsFromUrl);
+        if (Object.keys(groups).length > 0) {
+            for (const protocolId in groups) {
+                addConfigGroupToList(protocolId, groups[protocolId]);
+            }
+            showToast(`Found ${Object.keys(groups).length} protocol groups. Now testing...`, 'info');
+            testAllConnections();
+        } else {
+             showToast('No configs found at the source.', 'info');
+        }
+    }, 1500);
+}
 
     function closeModal() {
         liveCheckModal.style.display = 'none';
         urlInput.value = '';
     }
 
+    // --- Event Delegation for Dynamic Content ---
+configList.addEventListener('click', (e) => {
+    // --- Click on Header to Expand/Collapse ---
+    const header = e.target.closest('.config-item-header');
+    if (header) {
+        header.parentElement.classList.toggle('expanded');
+        return;
+    }
+
+    // --- Click on Individual Copy Button ---
+    const copyBtn = e.target.closest('.copy-btn');
+    if (copyBtn) {
+        const linkText = copyBtn.previousElementSibling.textContent;
+        navigator.clipboard.writeText(linkText).then(() => {
+            showToast('Link copied to clipboard!', 'info');
+        }, (err) => {
+            showToast('Failed to copy link.', 'error');
+            console.error('Copy failed', err);
+        });
+        return;
+    }
+
+    // --- Click on Copy All Button ---
+    const copyAllBtn = e.target.closest('.copy-all-btn');
+    if (copyAllBtn) {
+        const links = copyAllBtn.parentElement.querySelectorAll('.link-text');
+        const allLinksText = Array.from(links).map(link => link.textContent).join('\n');
+        navigator.clipboard.writeText(allLinksText).then(() => {
+            showToast('All links copied!', 'info');
+        }, (err) => {
+            showToast('Failed to copy links.', 'error');
+            console.error('Copy all failed', err);
+        });
+    }
+});
+    
     // --- Event Listeners ---
     mainHeader.addEventListener('click', toggleTheme);
     testAllBtn.addEventListener('click', testAllConnections);
