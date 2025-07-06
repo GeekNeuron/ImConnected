@@ -48,6 +48,7 @@ body {
     transition: background-color 0.3s, color 0.3s;
     line-height: 1.6;
     padding-bottom: 80px;
+    min-width: 800px;
 }
 
 .container {
