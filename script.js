@@ -177,7 +177,6 @@ function extractLinksFromDoc(doc) {
     return icons[protocolId] || 'shield';
 }
 
-
     /**
      * Adds a configuration to the list in the UI.
      * @param {string} configString - The full configuration string.
@@ -386,6 +385,10 @@ configList.addEventListener('click', (e) => {
         showToast('Source cleared.', 'info');
     });
 
+    function closeModal() {
+    liveCheckModal.style.display = 'none';
+    urlInput.value = '';
+}
     // Close modal if clicked outside the content
     window.addEventListener('click', (event) => {
         if (event.target === liveCheckModal) {
